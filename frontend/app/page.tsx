@@ -23,24 +23,36 @@ export default function DashboardPage() {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-  const fetchProjects = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await projectApi.getAll();
-      // Ensure we fall back to an empty array if data is null/undefined
-      setProjects(data || []);
-    } catch (err) {
-      setError('Failed to load projects. Make sure the Django backend is running.');
-      console.error(err);
-    } finally {
-      // Guarantees isLoading is turned off when request finishes
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchProjects();
+    let isMounted = true;
+
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await projectApi.getAll();
+        if (!isMounted) return;
+
+        // Ensure we fall back to an empty array if data is null/undefined
+        setProjects(data || []);
+      } catch (err) {
+        if (!isMounted) return;
+
+        setError('Failed to load projects. Make sure the Django backend is running.');
+        console.error(err);
+      } finally {
+        if (!isMounted) return;
+
+        // Guarantees isLoading is turned off when request finishes
+        setIsLoading(false);
+      }
+    };
+
+    void fetchProjects();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredProjects = useMemo(() => {
